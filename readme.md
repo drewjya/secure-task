@@ -1,8 +1,8 @@
-## Introduction
+Introduction
+------------
 
 Here's **what** you should do to run this project
 For Linux/MacOs:
-
 - install docker, docker-compose
 - run `make rebuild`
 - run docker ps -a
@@ -15,7 +15,6 @@ For Linux/MacOs:
 - rerun `make rebuild`
 
 For Windows:
-
 - follow this instruction https://linuxhint.com/run-makefile-windows/
 - install docker, docker-compose
 - run `make rebuild`
