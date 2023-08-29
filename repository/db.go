@@ -24,11 +24,17 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
+	if q.createAccountStmt, err = db.PrepareContext(ctx, createAccount); err != nil {
+		return nil, fmt.Errorf("error preparing query CreateAccount: %w", err)
+	}
 	if q.createSessionStmt, err = db.PrepareContext(ctx, createSession); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateSession: %w", err)
 	}
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
+	}
+	if q.getAccountByUserIdStmt, err = db.PrepareContext(ctx, getAccountByUserId); err != nil {
+		return nil, fmt.Errorf("error preparing query GetAccountByUserId: %w", err)
 	}
 	if q.getAllUsersStmt, err = db.PrepareContext(ctx, getAllUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query GetAllUsers: %w", err)
@@ -45,11 +51,19 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.invalidateTokenLatestStmt, err = db.PrepareContext(ctx, invalidateTokenLatest); err != nil {
 		return nil, fmt.Errorf("error preparing query InvalidateTokenLatest: %w", err)
 	}
+	if q.updateAccountStmt, err = db.PrepareContext(ctx, updateAccount); err != nil {
+		return nil, fmt.Errorf("error preparing query UpdateAccount: %w", err)
+	}
 	return &q, nil
 }
 
 func (q *Queries) Close() error {
 	var err error
+	if q.createAccountStmt != nil {
+		if cerr := q.createAccountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing createAccountStmt: %w", cerr)
+		}
+	}
 	if q.createSessionStmt != nil {
 		if cerr := q.createSessionStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createSessionStmt: %w", cerr)
@@ -58,6 +72,11 @@ func (q *Queries) Close() error {
 	if q.createUserStmt != nil {
 		if cerr := q.createUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
+		}
+	}
+	if q.getAccountByUserIdStmt != nil {
+		if cerr := q.getAccountByUserIdStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getAccountByUserIdStmt: %w", cerr)
 		}
 	}
 	if q.getAllUsersStmt != nil {
@@ -83,6 +102,11 @@ func (q *Queries) Close() error {
 	if q.invalidateTokenLatestStmt != nil {
 		if cerr := q.invalidateTokenLatestStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing invalidateTokenLatestStmt: %w", cerr)
+		}
+	}
+	if q.updateAccountStmt != nil {
+		if cerr := q.updateAccountStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing updateAccountStmt: %w", cerr)
 		}
 	}
 	return err
@@ -124,25 +148,31 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                             DBTX
 	tx                             *sql.Tx
+	createAccountStmt              *sql.Stmt
 	createSessionStmt              *sql.Stmt
 	createUserStmt                 *sql.Stmt
+	getAccountByUserIdStmt         *sql.Stmt
 	getAllUsersStmt                *sql.Stmt
 	getLatestSessionWithUserIdStmt *sql.Stmt
 	getOneUserWithEmailStmt        *sql.Stmt
 	invalidateTokenAllStmt         *sql.Stmt
 	invalidateTokenLatestStmt      *sql.Stmt
+	updateAccountStmt              *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 	return &Queries{
 		db:                             tx,
 		tx:                             tx,
+		createAccountStmt:              q.createAccountStmt,
 		createSessionStmt:              q.createSessionStmt,
 		createUserStmt:                 q.createUserStmt,
+		getAccountByUserIdStmt:         q.getAccountByUserIdStmt,
 		getAllUsersStmt:                q.getAllUsersStmt,
 		getLatestSessionWithUserIdStmt: q.getLatestSessionWithUserIdStmt,
 		getOneUserWithEmailStmt:        q.getOneUserWithEmailStmt,
 		invalidateTokenAllStmt:         q.invalidateTokenAllStmt,
 		invalidateTokenLatestStmt:      q.invalidateTokenLatestStmt,
+		updateAccountStmt:              q.updateAccountStmt,
 	}
 }

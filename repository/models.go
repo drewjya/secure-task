@@ -10,6 +10,15 @@ import (
 	"github.com/google/uuid"
 )
 
+type Account struct {
+	ID        uuid.UUID      `json:"id"`
+	UserID    uuid.UUID      `json:"userId"`
+	UserName  string         `json:"userName"`
+	Picture   *string `json:"picture"`
+	CreatedAt time.Time      `json:"createdAt"`
+	UpdatedAt time.Time      `json:"updatedAt"`
+}
+
 type Token struct {
 	ID             uuid.UUID `json:"id"`
 	UserID         uuid.UUID `json:"userId"`

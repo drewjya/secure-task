@@ -11,6 +11,21 @@ import (
 	"github.com/google/uuid"
 )
 
+const createAccount = `-- name: CreateAccount :exec
+
+INSERT INTO accounts (user_id, user_name) VALUES ($1, $2)
+`
+
+type CreateAccountParams struct {
+	UserID   uuid.UUID `json:"userId"`
+	UserName string    `json:"userName"`
+}
+
+func (q *Queries) CreateAccount(ctx context.Context, arg CreateAccountParams) error {
+	_, err := q.exec(ctx, q.createAccountStmt, createAccount, arg.UserID, arg.UserName)
+	return err
+}
+
 const createSession = `-- name: CreateSession :exec
 
 INSERT INTO tokens(user_id, session_token) VALUES($1, $2)
@@ -50,6 +65,26 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.LastAccessed,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getAccountByUserId = `-- name: GetAccountByUserId :one
+
+SELECT id, user_id, session_token, created_at, last_accessed_at, expires_at, is_valid FROM tokens WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetAccountByUserId(ctx context.Context, userID uuid.UUID) (Token, error) {
+	row := q.queryRow(ctx, q.getAccountByUserIdStmt, getAccountByUserId, userID)
+	var i Token
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.SessionToken,
+		&i.CreatedAt,
+		&i.LastAccessedAt,
+		&i.ExpiresAt,
+		&i.IsValid,
 	)
 	return i, err
 }
@@ -152,4 +187,51 @@ UPDATE tokens SET is_valid = false WHERE id = $1
 func (q *Queries) InvalidateTokenLatest(ctx context.Context, id uuid.UUID) error {
 	_, err := q.exec(ctx, q.invalidateTokenLatestStmt, invalidateTokenLatest, id)
 	return err
+}
+
+const updateAccount = `-- name: UpdateAccount :one
+
+UPDATE accounts AS a
+SET
+    user_name = $2,
+    picture = $3,
+    updated_at = current_timestamp
+FROM (
+        VALUES (
+                $1,
+                'new_user_name',
+                'new_picture'
+            )
+    ) AS upd(id, user_name, picture)
+WHERE
+    a.id = upd.id
+    AND (
+        a.user_name IS DISTINCT
+        FROM
+            upd.user_name
+            OR a.picture IS DISTINCT
+        FROM
+            upd.picture
+    )
+    AND a.id = $1 RETURNING id, user_id, user_name, picture, created_at, updated_at
+`
+
+type UpdateAccountParams struct {
+	ID       uuid.UUID      `json:"id"`
+	UserName string         `json:"userName"`
+	Picture  *string `json:"picture"`
+}
+
+func (q *Queries) UpdateAccount(ctx context.Context, arg UpdateAccountParams) (Account, error) {
+	row := q.queryRow(ctx, q.updateAccountStmt, updateAccount, arg.ID, arg.UserName, arg.Picture)
+	var i Account
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.UserName,
+		&i.Picture,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
