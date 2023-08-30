@@ -1,5 +1,5 @@
 rebuild:
-	docker rmi secure-task-app --force && docker-compose  up -d
+	docker rmi secure-task-app --force && docker compose  up -d
 
 generate:
 	sqlc generate
